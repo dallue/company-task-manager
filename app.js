@@ -26,6 +26,14 @@ window.onload = async () => {
   }
 };
 
+// 앱으로 돌아왔을 때 자동 동기화 (모바일 탭 전환 등)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && localStorage.getItem('gh_token')) {
+    await loadData();
+    renderCurrentPage();
+  }
+});
+
 async function saveSetup() {
   const token = document.getElementById('setup-token').value.trim();
   const gist = document.getElementById('setup-gist').value.trim();
@@ -47,8 +55,8 @@ function getToken() { return localStorage.getItem('gh_token'); }
 
 async function loadData() {
   try {
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json' }
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
+      headers: { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
     });
     if (!res.ok) throw new Error('불러오기 실패');
     const gist = await res.json();
