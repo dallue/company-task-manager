@@ -56,7 +56,7 @@ function getToken() { return localStorage.getItem('gh_token'); }
 async function loadData() {
   try {
     const res = await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`, {
-      headers: { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' }
+      headers: { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json' }
     });
     if (!res.ok) throw new Error('불러오기 실패');
     const gist = await res.json();
