@@ -97,6 +97,13 @@ async function syncData() {
   renderCurrentPage();
 }
 
+function logout() {
+  if (confirm('토큰 설정을 초기화할까요? 다시 토큰을 입력해야 해요.')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
+
 // =============================================
 // 네비게이션
 // =============================================
