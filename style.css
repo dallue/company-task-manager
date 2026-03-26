@@ -164,7 +164,9 @@ body {
 }
 .memo-item-text { font-size: 14px; margin-bottom: 6px; }
 .memo-item-date { font-size: 11px; color: #b2bec3; }
-.memo-item-actions { display: flex; gap: 8px; margin-top: 10px; }
+.memo-item-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.subtask-select-area { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.subtask-select-area select { flex: 1; min-width: 150px; padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
 
 /* 통계 */
 .stats-grid {

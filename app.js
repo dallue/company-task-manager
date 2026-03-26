@@ -505,12 +505,21 @@ function renderMemos() {
     return;
   }
   el.innerHTML = memos.map(m => `
-    <div class="memo-item">
+    <div class="memo-item" id="memo-${m.id}">
       <div class="memo-item-text">${m.content.replace(/\n/g, '<br>')}</div>
       <div class="memo-item-date">${m.createdAt.slice(0, 16).replace('T', ' ')}</div>
       <div class="memo-item-actions">
         <button class="btn-secondary" onclick="convertMemoToTask('${m.id}')">업무로 전환</button>
+        <button class="btn-secondary" onclick="showSubtaskSelect('${m.id}')">세부업무로 전환</button>
         <button class="btn-danger" onclick="deleteMemo('${m.id}')">삭제</button>
+      </div>
+      <div id="subtask-select-${m.id}" class="subtask-select-area hidden">
+        <select id="subtask-task-select-${m.id}">
+          <option value="">업무 선택...</option>
+          ${db.tasks.filter(t => t.status !== 'completed').map(t => `<option value="${t.id}">${t.title}</option>`).join('')}
+        </select>
+        <button class="btn-primary" onclick="convertMemoToSubtask('${m.id}')">확인</button>
+        <button class="btn-secondary" onclick="hideSubtaskSelect('${m.id}')">취소</button>
       </div>
     </div>`).join('');
 }
@@ -536,6 +545,28 @@ function convertMemoToTask(id) {
   const memo = db.quickMemos.find(m => m.id === id);
   if (!memo) return;
   showAddTask(memo.content);
+}
+
+function showSubtaskSelect(memoId) {
+  document.getElementById(`subtask-select-${memoId}`).classList.remove('hidden');
+}
+
+function hideSubtaskSelect(memoId) {
+  document.getElementById(`subtask-select-${memoId}`).classList.add('hidden');
+}
+
+async function convertMemoToSubtask(memoId) {
+  const taskId = document.getElementById(`subtask-task-select-${memoId}`).value;
+  if (!taskId) { showToast('업무를 선택해주세요'); return; }
+  const memo = db.quickMemos.find(m => m.id === memoId);
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!memo || !task) return;
+  if (!task.subtasks) task.subtasks = [];
+  task.subtasks.push({ id: uid(), title: memo.content, priority: 'medium', dueDate: '', status: 'todo', progress: 0, memos: [] });
+  db.quickMemos = db.quickMemos.filter(m => m.id !== memoId);
+  await saveData();
+  renderMemos();
+  showToast(`"${task.title}"의 세부업무로 추가됐어요`);
 }
 
 // =============================================
