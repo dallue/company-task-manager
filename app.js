@@ -1,7 +1,7 @@
 // ── 상수 ──────────────────────────────────────────────
 const GIST_ID       = '3b62f1c184e665d934e29facbcceee45';
 const GIST_FILENAME = 'companytasks.json';
-const GROQ_MODEL = 'llama-3.1-8b-instant';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 // ── 상태 ──────────────────────────────────────────────
 let db = { projects: [], quickMemos: [], lastUpdated: null };
