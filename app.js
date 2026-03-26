@@ -1,7 +1,7 @@
 // ── 상수 ──────────────────────────────────────────────
 const GIST_ID       = '3b62f1c184e665d934e29facbcceee45';
 const GIST_FILENAME = 'companytasks.json';
-const GEMINI_MODEL  = 'gemini-1.5-flash-latest';
+const GEMINI_MODEL  = 'gemini-1.5-flash';
 
 // ── 상태 ──────────────────────────────────────────────
 let db = { projects: [], quickMemos: [], lastUpdated: null };
@@ -1100,7 +1100,7 @@ async function callClaude(prompt, system) {
   if (!claudeKey) { showToast('Gemini API 키를 설정에서 입력해주세요'); throw new Error('no key'); }
   if (!system) system = '당신은 업무 관리 도우미입니다. 한국어로 간결하게 답변하세요.';
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${claudeKey}`, {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${claudeKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
