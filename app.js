@@ -66,7 +66,6 @@ async function loadData() {
       if (!gistDb.tasks) gistDb.tasks = [];
       if (!gistDb.quickMemos) gistDb.quickMemos = [];
       if (!gistDb.categories) gistDb.categories = ['기획', '보고', '미팅', '개발', '기타'];
-      // 임시 저장 데이터가 있고 더 최신이면 동기화 배너 표시
       const pending = getPendingDb();
       if (pending && pending.lastUpdated && (!gistDb.lastUpdated || pending.lastUpdated > gistDb.lastUpdated)) {
         db = gistDb;
@@ -75,10 +74,22 @@ async function loadData() {
         db = gistDb;
         clearPendingDb();
       }
+      // Gist 로드 성공 시 last_known_db 갱신
+      localStorage.setItem('last_known_db', JSON.stringify(db));
     }
     showToast('데이터를 불러왔어요');
   } catch (e) {
-    showToast('데이터 로드 실패: ' + e.message);
+    // Gist 로드 실패 시 last_known_db로 fallback
+    const lastKnown = localStorage.getItem('last_known_db');
+    if (lastKnown) {
+      db = JSON.parse(lastKnown);
+      if (!db.tasks) db.tasks = [];
+      if (!db.quickMemos) db.quickMemos = [];
+      if (!db.categories) db.categories = ['기획', '보고', '미팅', '개발', '기타'];
+      showToast('⚠️ 오프라인 상태예요. 마지막 저장 데이터를 표시합니다');
+    } else {
+      showToast('데이터 로드 실패: 네트워크를 확인해주세요');
+    }
   }
 }
 
@@ -96,6 +107,8 @@ async function saveData() {
     });
     if (!res.ok) throw new Error('저장 실패');
     clearPendingDb();
+    // Gist 저장 성공 시 last_known_db 갱신
+    localStorage.setItem('last_known_db', JSON.stringify(db));
     showToast('저장됐어요 ✓');
   } catch (e) {
     // Gist 저장 실패 시 localStorage에 임시 저장
