@@ -1,7 +1,7 @@
 // ── 상수 ──────────────────────────────────────────────
 const GIST_ID       = '3b62f1c184e665d934e29facbcceee45';
 const GIST_FILENAME = 'companytasks.json';
-const GEMINI_MODEL  = 'gemini-1.5-flash';
+const GEMINI_MODEL  = 'gemini-2.0-flash';
 
 // ── 상태 ──────────────────────────────────────────────
 let db = { projects: [], quickMemos: [], lastUpdated: null };
