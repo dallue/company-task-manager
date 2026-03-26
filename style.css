@@ -398,6 +398,129 @@ body {
 }
 .divider { height: 1px; background: #f1f3f5; margin: 12px 0; }
 
+/* 프로젝트 필터 탭 */
+.project-filter-bar {
+  background: white; border-bottom: 1px solid #f1f3f5;
+  position: sticky; top: 56px; z-index: 90; overflow-x: auto;
+}
+.project-tabs {
+  display: flex; gap: 4px; padding: 8px 12px;
+  white-space: nowrap; min-width: max-content;
+}
+.proj-tab {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid #dfe6e9;
+  background: white; font-size: 13px; font-weight: 600; cursor: pointer;
+  color: #636e72; transition: all 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.proj-tab:hover { border-color: #6c5ce7; color: #6c5ce7; }
+.proj-tab.active { background: #6c5ce7; color: white; border-color: #6c5ce7; }
+.proj-tab .tab-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* 모달 */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 300;
+}
+.modal-box {
+  background: white; border-radius: 20px 20px 0 0;
+  padding: 20px; width: 100%; max-width: 680px;
+  max-height: 80vh; overflow-y: auto;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-header h3 { font-size: 17px; font-weight: 700; }
+.modal-close {
+  background: #f5f6fa; border: none; border-radius: 50%;
+  width: 32px; height: 32px; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.modal-add-row {
+  display: flex; gap: 8px; align-items: center; margin-top: 12px;
+}
+.modal-add-row input[type="text"] {
+  flex: 1; padding: 10px 14px; border: 1.5px solid #dfe6e9;
+  border-radius: 8px; font-size: 14px; outline: none;
+}
+.modal-add-row input[type="text"]:focus { border-color: #6c5ce7; }
+
+/* 프로젝트 모달 아이템 */
+.project-modal-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+.project-modal-item:last-of-type { border-bottom: none; }
+.proj-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.proj-item-name { flex: 1; font-size: 14px; font-weight: 600; }
+.proj-item-count { font-size: 12px; color: #b2bec3; }
+
+/* AI 버튼 */
+.btn-ai {
+  padding: 10px 16px; background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: white; border: none; border-radius: 10px; font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.btn-ai:hover { opacity: 0.88; }
+.btn-ai:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ai-small {
+  padding: 5px 10px; background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: white; border: none; border-radius: 6px; font-size: 11px;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn-ai-small:hover { opacity: 0.88; }
+.btn-ai-small:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* AI 결과 */
+.ai-result {
+  background: #f9f7ff; border: 1.5px solid #d4cffe; border-radius: 10px;
+  padding: 14px; font-size: 13px; line-height: 1.7; color: #2d3436;
+  margin-top: 12px; white-space: pre-wrap;
+}
+.ai-btn-row {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+
+/* 폼 라벨 행 */
+.form-label-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.form-label-row label { margin-bottom: 0; }
+
+/* 우선순위 행 */
+.priority-row { display: flex; gap: 8px; align-items: center; }
+.priority-row select { flex: 1; }
+
+/* 메모 액션 행 */
+.memo-actions-row {
+  display: flex; gap: 8px; align-items: stretch;
+}
+
+/* 완료 업무 배지 */
+.completed-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; background: #d4edda; color: #155724;
+}
+
+/* 로딩 스피너 */
+.ai-loading {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #6c5ce7; padding: 10px 0;
+}
+.ai-loading::before {
+  content: ''; width: 16px; height: 16px; border: 2px solid #d4cffe;
+  border-top-color: #6c5ce7; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 @media (max-width: 400px) {
   .summary-cards { grid-template-columns: repeat(2, 1fr); }
   .form-row { grid-template-columns: 1fr; }

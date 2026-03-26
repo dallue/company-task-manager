@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>업무 관리</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -16,10 +16,12 @@
   <div class="setup-box">
     <h2>초기 설정</h2>
     <p>GitHub 정보를 입력해주세요. 한 번만 입력하면 저장됩니다.</p>
-    <label>GitHub PAT 토큰</label>
+    <label>GitHub PAT 토큰 *</label>
     <input type="password" id="setup-token" placeholder="ghp_xxxxxxxxxxxx">
-    <label>Gist ID</label>
+    <label>Gist ID *</label>
     <input type="text" id="setup-gist" placeholder="3b62f1c184e665d934e29facbcceee45">
+    <label>Claude API Key <span style="font-size:12px;color:#b2bec3">(AI 기능 사용 시 입력)</span></label>
+    <input type="password" id="setup-claude" placeholder="sk-ant-xxxx">
     <button onclick="saveSetup()">저장 및 시작</button>
     <p id="setup-error" class="error-msg"></p>
   </div>
@@ -33,38 +35,29 @@
     <span id="header-title">대시보드</span>
     <div class="header-actions">
       <button class="icon-btn" onclick="showAddTask()" title="업무 추가">＋</button>
+      <button class="icon-btn" onclick="openProjectModal()" title="프로젝트 관리">📁</button>
       <button class="icon-btn" onclick="syncData()" title="동기화">↻</button>
       <button class="icon-btn" onclick="logout()" title="설정">⚙</button>
     </div>
   </header>
 
-  <!-- 페이지 컨테이너 -->
+  <!-- 프로젝트 필터 탭 -->
+  <div id="project-filter-bar" class="project-filter-bar hidden">
+    <div id="project-tabs" class="project-tabs"></div>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
   <main class="main-content">
 
     <!-- 대시보드 -->
     <div id="page-dashboard" class="page">
       <div class="summary-cards">
-        <div class="card card-blue">
-          <div class="card-num" id="stat-total">0</div>
-          <div class="card-label">전체 업무</div>
-        </div>
-        <div class="card card-yellow">
-          <div class="card-num" id="stat-inprogress">0</div>
-          <div class="card-label">진행 중</div>
-        </div>
-        <div class="card card-red">
-          <div class="card-num" id="stat-delayed">0</div>
-          <div class="card-label">지연</div>
-        </div>
-        <div class="card card-green">
-          <div class="card-num" id="stat-done">0</div>
-          <div class="card-label">완료</div>
-        </div>
+        <div class="card card-blue"><div class="card-num" id="stat-total">0</div><div class="card-label">전체 업무</div></div>
+        <div class="card card-yellow"><div class="card-num" id="stat-inprogress">0</div><div class="card-label">진행 중</div></div>
+        <div class="card card-red"><div class="card-num" id="stat-delayed">0</div><div class="card-label">지연</div></div>
+        <div class="card card-green"><div class="card-num" id="stat-done">0</div><div class="card-label">완료</div></div>
       </div>
-
-      <!-- 경고 영역 -->
       <div id="warnings-area"></div>
-
       <h3 class="section-title">오늘의 할 일</h3>
       <div id="today-todos"></div>
     </div>
@@ -113,7 +106,10 @@
     <div id="page-memo" class="page hidden">
       <div class="memo-input-area">
         <textarea id="memo-input" placeholder="생각나는 내용을 빠르게 메모하세요..." rows="4"></textarea>
-        <button class="btn-primary full-width" onclick="addQuickMemo()">메모 저장</button>
+        <div class="memo-actions-row">
+          <button class="btn-primary" style="flex:1" onclick="addQuickMemo()">메모 저장</button>
+          <button class="btn-ai" onclick="aiOrganizeMemos()">✨ AI 정리</button>
+        </div>
       </div>
       <h3 class="section-title">메모 목록</h3>
       <div id="memo-list"></div>
@@ -122,38 +118,27 @@
     <!-- 업무 통계 -->
     <div id="page-stats" class="page hidden">
       <div class="stats-grid">
-        <div class="stat-box">
-          <div class="stat-label">전체 완료율</div>
-          <div class="stat-value" id="stats-rate">0%</div>
-          <div class="progress-bar"><div class="progress-fill" id="stats-rate-bar"></div></div>
+        <div class="stat-box"><div class="stat-label">전체 완료율</div><div class="stat-value" id="stats-rate">0%</div><div class="progress-bar"><div class="progress-fill" id="stats-rate-bar"></div></div></div>
+        <div class="stat-box"><div class="stat-label">지연 업무</div><div class="stat-value red" id="stats-delayed">0건</div></div>
+        <div class="stat-box"><div class="stat-label">이번 달 완료</div><div class="stat-value green" id="stats-month-done">0건</div></div>
+        <div class="stat-box"><div class="stat-label">진행 중</div><div class="stat-value blue" id="stats-inprogress">0건</div></div>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-btn-row">
+          <button class="btn-ai" onclick="aiSummarizeProgress()">✨ AI 진행 요약</button>
+          <button class="btn-secondary" onclick="generateAIText()">📋 Claude.ai 텍스트</button>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">지연 업무</div>
-          <div class="stat-value red" id="stats-delayed">0건</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">이번 달 완료</div>
-          <div class="stat-value green" id="stats-month-done">0건</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">진행 중</div>
-          <div class="stat-value blue" id="stats-inprogress">0건</div>
+        <div id="ai-summary-result" class="ai-result hidden"></div>
+        <div id="ai-text-area" class="hidden">
+          <textarea id="ai-text" rows="8" readonly></textarea>
+          <button class="btn-secondary" onclick="copyAIText()">복사</button>
+          <p id="copy-confirm" class="success-msg hidden">복사됐어요!</p>
         </div>
       </div>
       <h3 class="section-title">카테고리별 업무</h3>
       <div id="stats-category"></div>
       <h3 class="section-title">중요도별 현황</h3>
       <div id="stats-priority"></div>
-      <h3 class="section-title">AI 분석 요청</h3>
-      <div class="ai-analysis-box">
-        <p>현재 업무 데이터를 Claude AI가 분석할 수 있는 형태로 정리합니다.<br>복사 후 Claude.ai에 붙여넣기 하세요.</p>
-        <button class="btn-primary" onclick="generateAIText()">분석 텍스트 생성</button>
-        <div id="ai-text-area" class="hidden">
-          <textarea id="ai-text" rows="10" readonly></textarea>
-          <button class="btn-secondary" onclick="copyAIText()">클립보드에 복사</button>
-          <p id="copy-confirm" class="success-msg hidden">복사됐어요!</p>
-        </div>
-      </div>
     </div>
 
     <!-- 업무 상세 -->
@@ -165,8 +150,16 @@
     <div id="page-form" class="page hidden">
       <form id="task-form" onsubmit="saveTask(event)">
         <input type="hidden" id="form-id">
+        <input type="hidden" id="form-project-id">
         <div class="form-group">
-          <label>업무명 *</label>
+          <label>프로젝트 *</label>
+          <select id="form-project" required onchange="document.getElementById('form-project-id').value=this.value"></select>
+        </div>
+        <div class="form-group">
+          <div class="form-label-row">
+            <label>업무명 *</label>
+            <button type="button" class="btn-ai-small" onclick="aiBreakdownTask()">✨ AI 세부업무 자동 생성</button>
+          </div>
           <input type="text" id="form-title" required placeholder="업무명 입력">
         </div>
         <div class="form-group">
@@ -181,11 +174,14 @@
           </div>
           <div class="form-group">
             <label>중요도 *</label>
-            <select id="form-priority" required>
-              <option value="high">높음</option>
-              <option value="medium" selected>중간</option>
-              <option value="low">낮음</option>
-            </select>
+            <div class="priority-row">
+              <select id="form-priority" required>
+                <option value="high">높음</option>
+                <option value="medium" selected>중간</option>
+                <option value="low">낮음</option>
+              </select>
+              <button type="button" class="btn-ai-small" onclick="aiSuggestPriority()">✨ AI 추천</button>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -216,11 +212,9 @@
           <label>메모</label>
           <textarea id="form-memo" rows="2" placeholder="업무 관련 메모"></textarea>
         </div>
-
         <h3 class="section-title">세부 업무</h3>
         <div id="subtask-list-form"></div>
         <button type="button" class="btn-secondary" onclick="addSubtaskRow()">＋ 세부 업무 추가</button>
-
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="goBack()">취소</button>
           <button type="submit" class="btn-primary">저장</button>
@@ -232,32 +226,42 @@
 
   <!-- 하단 네비게이션 -->
   <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="navigate('dashboard')" data-page="dashboard">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">홈</span>
-    </button>
-    <button class="nav-btn" onclick="navigate('calendar')" data-page="calendar">
-      <span class="nav-icon">📅</span>
-      <span class="nav-label">일정표</span>
-    </button>
-    <button class="nav-btn" onclick="navigate('tasks')" data-page="tasks">
-      <span class="nav-icon">📋</span>
-      <span class="nav-label">업무</span>
-    </button>
-    <button class="nav-btn" onclick="navigate('completed')" data-page="completed">
-      <span class="nav-icon">✅</span>
-      <span class="nav-label">완료</span>
-    </button>
-    <button class="nav-btn" onclick="navigate('memo')" data-page="memo">
-      <span class="nav-icon">📝</span>
-      <span class="nav-label">메모</span>
-    </button>
-    <button class="nav-btn" onclick="navigate('stats')" data-page="stats">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">통계</span>
-    </button>
+    <button class="nav-btn active" onclick="navigate('dashboard')" data-page="dashboard"><span class="nav-icon">🏠</span><span class="nav-label">홈</span></button>
+    <button class="nav-btn" onclick="navigate('calendar')" data-page="calendar"><span class="nav-icon">📅</span><span class="nav-label">일정표</span></button>
+    <button class="nav-btn" onclick="navigate('tasks')" data-page="tasks"><span class="nav-icon">📋</span><span class="nav-label">업무</span></button>
+    <button class="nav-btn" onclick="navigate('completed')" data-page="completed"><span class="nav-icon">✅</span><span class="nav-label">완료</span></button>
+    <button class="nav-btn" onclick="navigate('memo')" data-page="memo"><span class="nav-icon">📝</span><span class="nav-label">메모</span></button>
+    <button class="nav-btn" onclick="navigate('stats')" data-page="stats"><span class="nav-icon">📊</span><span class="nav-label">통계</span></button>
   </nav>
 
+</div>
+
+<!-- 프로젝트 관리 모달 -->
+<div id="project-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>프로젝트 관리</h3>
+      <button class="modal-close" onclick="closeProjectModal()">✕</button>
+    </div>
+    <div id="project-list-modal"></div>
+    <div class="modal-add-row">
+      <input type="text" id="new-project-name" placeholder="새 프로젝트명">
+      <input type="color" id="new-project-color" value="#0984e3" style="width:40px;height:36px;border:none;cursor:pointer;border-radius:6px">
+      <button class="btn-primary" onclick="addProject()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI 결과 모달 -->
+<div id="ai-modal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="ai-modal-title">AI 분석 결과</h3>
+      <button class="modal-close" onclick="closeAiModal()">✕</button>
+    </div>
+    <div id="ai-modal-content" style="margin-bottom:16px"></div>
+    <div id="ai-modal-actions" class="modal-actions"></div>
+  </div>
 </div>
 
 <!-- 임시 저장 동기화 배너 -->
@@ -270,6 +274,6 @@
 <!-- 토스트 알림 -->
 <div id="toast" class="toast hidden"></div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>
