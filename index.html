@@ -214,7 +214,11 @@
         </div>
         <h3 class="section-title">세부 업무</h3>
         <div id="subtask-list-form"></div>
-        <button type="button" class="btn-secondary" onclick="addSubtaskRow()">＋ 세부 업무 추가</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn-secondary" onclick="addSubtaskRow()">＋ 세부 업무 추가</button>
+          <button type="button" class="btn-ai-small" onclick="aiSuggestSubtaskDates()">✨ AI 일정 추천</button>
+          <button type="button" class="btn-secondary" onclick="distributeSubtaskDates()">📅 균등 배분</button>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="goBack()">취소</button>
           <button type="submit" class="btn-primary">저장</button>
@@ -274,6 +278,6 @@
 <!-- 토스트 알림 -->
 <div id="toast" class="toast hidden"></div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

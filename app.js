@@ -742,6 +742,86 @@ function addSubtaskRow(data = {}) {
   document.getElementById('subtask-list-form').appendChild(div);
 }
 
+async function aiSuggestSubtaskDates() {
+  const mainTitle = document.getElementById('form-title')?.value.trim();
+  const mainDue   = document.getElementById('form-due')?.value;
+  const mainDesc  = document.getElementById('form-desc')?.value.trim();
+  if (!mainDue)   { showToast('메인 업무 마감일을 먼저 입력해주세요'); return; }
+
+  const rows = document.querySelectorAll('.subtask-form-row');
+  if (rows.length === 0) { showToast('세부 업무를 먼저 추가해주세요'); return; }
+
+  // 세부업무 목록 수집
+  const subtaskList = [];
+  rows.forEach((row, i) => {
+    const rowId    = row.id.replace('strow-', '');
+    const title    = document.getElementById(`st-title-${rowId}`)?.value.trim() || `세부업무 ${i+1}`;
+    const priority = document.getElementById(`st-priority-${rowId}`)?.value || 'medium';
+    subtaskList.push({ rowId, title, priority, index: i+1 });
+  });
+
+  showToast('AI가 일정을 분석 중이에요...');
+
+  const prompt = `메인 업무: "${mainTitle}"
+${mainDesc ? `업무 내용: "${mainDesc}"` : ''}
+메인 마감일: ${mainDue}
+오늘 날짜: ${today()}
+
+세부 업무 목록 (순서대로):
+${subtaskList.map(s => `${s.index}. ${s.title} (중요도: ${priorityLabel(s.priority)})`).join('\n')}
+
+위 세부업무들의 추천 마감일을 아래 조건에 맞게 제안해줘:
+- 업무 순서와 의존관계 고려 (앞 업무가 완료돼야 다음 업무 가능한 경우)
+- 중요도 높은 업무는 여유 있게 앞에 배치
+- 마지막 세부업무는 메인 마감일(${mainDue})을 넘지 않도록
+- 오늘(${today()}) 이후 날짜만
+- 반드시 세부업무 수(${subtaskList.length}개)만큼 YYYY-MM-DD 형식 날짜만 한 줄에 하나씩 출력. 설명 없이 날짜만.`;
+
+  try {
+    const result = await callClaude(prompt, '당신은 프로젝트 일정 전문가입니다. 날짜만 YYYY-MM-DD 형식으로 출력하세요.');
+    const dates  = result.trim().split('\n')
+      .map(l => l.trim())
+      .filter(l => /^\d{4}-\d{2}-\d{2}$/.test(l));
+
+    if (dates.length < subtaskList.length) {
+      showToast('AI 응답 파싱 실패. 균등 배분으로 대체할게요'); distributeSubtaskDates(); return;
+    }
+
+    subtaskList.forEach((s, i) => {
+      const input = document.getElementById(`st-due-${s.rowId}`);
+      if (input && dates[i]) input.value = dates[i];
+    });
+    showToast(`✨ AI가 ${subtaskList.length}개 세부업무 일정을 추천했어요`);
+  } catch (e) {
+    showToast('AI 요청 실패. 균등 배분으로 대체할게요'); distributeSubtaskDates();
+  }
+}
+
+function distributeSubtaskDates() {
+  const mainDue = document.getElementById('form-due')?.value;
+  if (!mainDue) { showToast('메인 업무 마감일을 먼저 입력해주세요'); return; }
+
+  const rows = document.querySelectorAll('.subtask-form-row');
+  if (rows.length === 0) { showToast('세부 업무를 먼저 추가해주세요'); return; }
+
+  const start   = new Date(); start.setHours(0,0,0,0);
+  const end     = new Date(mainDue); end.setHours(0,0,0,0);
+  const totalMs = end - start;
+  const count   = rows.length;
+
+  rows.forEach((row, i) => {
+    const rowId  = row.id.replace('strow-', '');
+    const input  = document.getElementById(`st-due-${rowId}`);
+    if (!input) return;
+    // 마지막 세부업무는 메인 마감일과 동일
+    const ratio  = (i + 1) / count;
+    const dateMs = start.getTime() + totalMs * ratio;
+    input.value  = new Date(dateMs).toISOString().slice(0, 10);
+  });
+
+  showToast(`${count}개 세부업무 일정을 배분했어요`);
+}
+
 function saveTask(e) {
   e.preventDefault();
   const id        = document.getElementById('form-id').value;
@@ -1142,6 +1222,7 @@ async function aiBreakdownTask() {
     showAiModal('AI 세부업무 제안', `<div class="ai-result">${escHtml(result)}</div>`, [
       { label: '이 세부업무 추가하기', type: 'primary', fn: () => {
         subtasks.forEach(t => addSubtaskRow({ title: t }));
+        distributeSubtaskDates();
         closeAiModal();
         showToast(`${subtasks.length}개 세부업무를 추가했어요`);
       }},
