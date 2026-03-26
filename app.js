@@ -62,10 +62,19 @@ async function loadData() {
     const gist = await res.json();
     const content = gist.files[GIST_FILENAME]?.content;
     if (content && content.trim() !== '{}' && content.trim() !== '') {
-      db = JSON.parse(content);
-      if (!db.tasks) db.tasks = [];
-      if (!db.quickMemos) db.quickMemos = [];
-      if (!db.categories) db.categories = ['기획', '보고', '미팅', '개발', '기타'];
+      const gistDb = JSON.parse(content);
+      if (!gistDb.tasks) gistDb.tasks = [];
+      if (!gistDb.quickMemos) gistDb.quickMemos = [];
+      if (!gistDb.categories) gistDb.categories = ['기획', '보고', '미팅', '개발', '기타'];
+      // 임시 저장 데이터가 있고 더 최신이면 동기화 배너 표시
+      const pending = getPendingDb();
+      if (pending && pending.lastUpdated && (!gistDb.lastUpdated || pending.lastUpdated > gistDb.lastUpdated)) {
+        db = gistDb;
+        showPendingBanner();
+      } else {
+        db = gistDb;
+        clearPendingDb();
+      }
     }
     showToast('데이터를 불러왔어요');
   } catch (e) {
@@ -86,15 +95,65 @@ async function saveData() {
       body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(db, null, 2) } } })
     });
     if (!res.ok) throw new Error('저장 실패');
+    clearPendingDb();
     showToast('저장됐어요 ✓');
   } catch (e) {
-    showToast('저장 실패: ' + e.message);
+    // Gist 저장 실패 시 localStorage에 임시 저장
+    db.lastUpdated = new Date().toISOString();
+    localStorage.setItem('pending_db', JSON.stringify(db));
+    showToast('⚠️ 임시 저장됐어요 (네트워크 연결 시 동기화 필요)');
   }
 }
 
 async function syncData() {
   await loadData();
   renderCurrentPage();
+}
+
+// 임시 저장 관련 함수
+function getPendingDb() {
+  const raw = localStorage.getItem('pending_db');
+  return raw ? JSON.parse(raw) : null;
+}
+
+function clearPendingDb() {
+  localStorage.removeItem('pending_db');
+  hidePendingBanner();
+}
+
+function showPendingBanner() {
+  let banner = document.getElementById('pending-banner');
+  if (!banner) return;
+  banner.classList.remove('hidden');
+}
+
+function hidePendingBanner() {
+  const banner = document.getElementById('pending-banner');
+  if (banner) banner.classList.add('hidden');
+}
+
+async function syncPendingData() {
+  const pending = getPendingDb();
+  if (!pending) return;
+  db = pending;
+  try {
+    db.lastUpdated = new Date().toISOString();
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `token ${getToken()}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(db, null, 2) } } })
+    });
+    if (!res.ok) throw new Error('동기화 실패');
+    clearPendingDb();
+    renderCurrentPage();
+    showToast('동기화 완료! ✓');
+  } catch (e) {
+    showToast('동기화 실패: 네트워크를 확인해주세요');
+  }
 }
 
 function logout() {
@@ -145,6 +204,12 @@ function renderCurrentPage() {
 // 유틸
 // =============================================
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function calcSubtaskProgress(task) {
+  if (!task.subtasks || task.subtasks.length === 0) return null;
+  const total = task.subtasks.reduce((sum, s) => sum + (s.progress || 0), 0);
+  return Math.round(total / task.subtasks.length);
+}
 function today() { return new Date().toISOString().slice(0, 10); }
 function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
@@ -670,9 +735,24 @@ function renderDetail(task) {
       <div class="detail-title">${task.title}</div>
       ${task.dueDate ? `<div style="font-size:13px;color:#636e72">마감일: ${task.dueDate}</div>` : ''}
       ${task.estimatedHours ? `<div style="font-size:13px;color:#636e72">예상 소요: ${task.estimatedHours}시간</div>` : ''}
-      <div class="detail-progress-row" style="margin-top:10px">
-        <div class="detail-progress-bar"><div class="detail-progress-fill" style="width:${task.progress || 0}%"></div></div>
-        <span style="font-size:13px;font-weight:700">${task.progress || 0}%</span>
+      <div style="margin-top:10px">
+        ${(() => {
+          const auto = calcSubtaskProgress(task);
+          const progress = auto !== null ? auto : (task.progress || 0);
+          return `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:12px;color:#636e72">${auto !== null ? '진행률 (세부업무 평균)' : '진행률'}</span>
+            ${auto !== null ? `<span style="font-size:11px;color:#0984e3;background:#dfe6e9;padding:2px 6px;border-radius:4px">자동 계산</span>` : ''}
+          </div>
+          <div class="detail-progress-row">
+            <div class="detail-progress-bar"><div class="detail-progress-fill" style="width:${progress}%"></div></div>
+            <span style="font-size:13px;font-weight:700">${progress}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+            <input type="number" id="main-progress-input-${task.id}" min="0" max="100" value="${task.progress || 0}" style="width:70px;padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+            <button class="btn-secondary" style="font-size:12px;padding:4px 10px" onclick="updateMainProgress('${task.id}')">직접 수정</button>
+          </div>`;
+        })()}
       </div>
       <div class="detail-actions">
         <button class="btn-secondary" onclick="showEditTask('${task.id}')">수정</button>
@@ -805,9 +885,22 @@ async function saveSubtaskEdit(taskId, subId) {
   sub.dueDate = document.getElementById(`sub-edit-due-${subId}`).value;
   sub.status = document.getElementById(`sub-edit-status-${subId}`).value;
   sub.progress = parseInt(document.getElementById(`sub-edit-progress-${subId}`).value) || 0;
+  const auto = calcSubtaskProgress(task);
+  if (auto !== null) task.progress = auto;
   await saveData();
   renderDetail(task);
   showToast('세부 업무가 수정됐어요');
+}
+
+async function updateMainProgress(taskId) {
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const val = parseInt(document.getElementById(`main-progress-input-${taskId}`).value);
+  if (isNaN(val) || val < 0 || val > 100) { showToast('0~100 사이 숫자를 입력해주세요'); return; }
+  task.progress = val;
+  await saveData();
+  renderDetail(task);
+  showToast('진행률이 수정됐어요');
 }
 
 async function addTaskMemo(taskId, subId) {

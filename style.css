@@ -375,6 +375,21 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
+.pending-banner {
+  position: fixed; top: 56px; left: 0; right: 0;
+  background: #fdcb6e; color: #2d3436;
+  padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+  z-index: 150; font-size: 13px; font-weight: 600;
+  max-width: 680px; margin: 0 auto;
+}
+.pending-banner span { flex: 1; }
+.pending-banner button {
+  padding: 4px 12px; border: none; border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.pending-banner button:first-of-type { background: #2d3436; color: white; }
+.pending-banner button:last-of-type { background: rgba(0,0,0,0.1); color: #2d3436; }
+
 /* 유틸 */
 .error-msg { color: #d63031; font-size: 13px; margin-top: 8px; }
 .success-msg { color: #00b894; font-size: 13px; margin-top: 8px; }
