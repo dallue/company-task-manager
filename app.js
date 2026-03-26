@@ -707,6 +707,8 @@ function populateProjectSelect(selectedId) {
 
 function addSubtaskRow(data = {}) {
   const id = data.id || uid();
+  // 마감일 미지정 시 메인 업무 마감일 기본값으로
+  if (!data.dueDate) data.dueDate = document.getElementById('form-due')?.value || '';
   const div = document.createElement('div');
   div.className = 'subtask-form-row';
   div.id = `strow-${id}`;
@@ -722,11 +724,14 @@ function addSubtaskRow(data = {}) {
       <input type="date" id="st-due-${id}" value="${data.dueDate||''}">
     </div>
     <div class="form-row" style="gap:6px">
-      <select id="st-status-${id}">
-        <option value="todo"        ${data.status==='todo'       ?'selected':''}>시작 전</option>
-        <option value="in-progress" ${data.status==='in-progress'?'selected':''}>진행 중</option>
-        <option value="completed"   ${data.status==='completed'  ?'selected':''}>완료</option>
-      </select>
+      <div>
+        <label style="font-size:11px;color:#636e72;display:block;margin-bottom:2px">상태</label>
+        <select id="st-status-${id}">
+          <option value="todo"        ${data.status==='todo'       ?'selected':''}>시작 전</option>
+          <option value="in-progress" ${data.status==='in-progress'?'selected':''}>진행 중</option>
+          <option value="completed"   ${data.status==='completed'  ?'selected':''}>완료</option>
+        </select>
+      </div>
       <div>
         <label style="font-size:11px;color:#636e72;display:block;margin-bottom:2px">진행률 (%)</label>
         <input type="number" id="st-progress-${id}" value="${data.progress||0}" min="0" max="100">
