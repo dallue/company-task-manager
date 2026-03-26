@@ -1104,8 +1104,7 @@ async function callClaude(prompt, system) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: system + '\n\n' + prompt }] }],
       generationConfig: { maxOutputTokens: 1024 }
     })
   });
