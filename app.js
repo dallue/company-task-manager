@@ -10,6 +10,7 @@ let pageHistory = [];
 let calendarMode = 'monthly';
 let calendarDate = new Date();
 let editingSubtasks = [];
+let convertingMemoId = null;
 
 // =============================================
 // 초기 실행
@@ -107,14 +108,14 @@ async function saveData() {
     });
     if (!res.ok) throw new Error('저장 실패');
     clearPendingDb();
-    // Gist 저장 성공 시 last_known_db 갱신
     localStorage.setItem('last_known_db', JSON.stringify(db));
     showToast('저장됐어요 ✓');
+    try { renderCurrentPage(); } catch { showToast('저장됐어요. 화면을 수동으로 새로고침 해주세요(↻)'); }
   } catch (e) {
-    // Gist 저장 실패 시 localStorage에 임시 저장
     db.lastUpdated = new Date().toISOString();
     localStorage.setItem('pending_db', JSON.stringify(db));
     showToast('⚠️ 임시 저장됐어요 (네트워크 연결 시 동기화 필요)');
+    try { renderCurrentPage(); } catch { showToast('임시 저장됐어요. 화면을 수동으로 새로고침 해주세요(↻)'); }
   }
 }
 
@@ -622,6 +623,7 @@ async function deleteMemo(id) {
 function convertMemoToTask(id) {
   const memo = db.quickMemos.find(m => m.id === id);
   if (!memo) return;
+  convertingMemoId = id;
   showAddTask(memo.content);
 }
 
@@ -1033,6 +1035,7 @@ function renderSubtaskForm() {
         <option value="in-progress" ${s.status === 'in-progress' ? 'selected' : ''}>진행 중</option>
         <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>완료</option>
       </select>
+      <input type="number" min="0" max="100" placeholder="진행률%" value="${s.progress || 0}" oninput="editingSubtasks[${i}].progress=parseInt(this.value)||0" style="width:80px">
     </div>`).join('');
 }
 
@@ -1070,6 +1073,10 @@ async function saveTask(e) {
     db.tasks.push(taskData);
   }
 
+  if (convertingMemoId) {
+    db.quickMemos = db.quickMemos.filter(m => m.id !== convertingMemoId);
+    convertingMemoId = null;
+  }
   await saveData();
   goBack();
   showToast(id ? '업무를 수정했어요' : '업무를 등록했어요');
