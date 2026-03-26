@@ -1,7 +1,7 @@
 // ── 상수 ──────────────────────────────────────────────
 const GIST_ID       = '3b62f1c184e665d934e29facbcceee45';
 const GIST_FILENAME = 'companytasks.json';
-const GEMINI_MODEL  = 'gemini-2.0-flash';
+const GROQ_MODEL = 'llama-3.1-8b-instant';
 
 // ── 상태 ──────────────────────────────────────────────
 let db = { projects: [], quickMemos: [], lastUpdated: null };
@@ -1094,18 +1094,25 @@ function closeAiModal() {
   aiModalActions = [];
 }
 
-// ── Gemini API ────────────────────────────────────────
+// ── Groq API ──────────────────────────────────────────
 async function callClaude(prompt, system) {
   if (!claudeKey) claudeKey = localStorage.getItem('claude_key') || '';
-  if (!claudeKey) { showToast('Gemini API 키를 설정에서 입력해주세요'); throw new Error('no key'); }
+  if (!claudeKey) { showToast('Groq API 키를 설정에서 입력해주세요'); throw new Error('no key'); }
   if (!system) system = '당신은 업무 관리 도우미입니다. 한국어로 간결하게 답변하세요.';
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${claudeKey}`, {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${claudeKey}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: system + '\n\n' + prompt }] }],
-      generationConfig: { maxOutputTokens: 1024 }
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user',   content: prompt }
+      ],
+      max_tokens: 1024
     })
   });
   if (!res.ok) {
@@ -1113,7 +1120,7 @@ async function callClaude(prompt, system) {
     throw new Error(err.error?.message || `API 오류 (${res.status})`);
   }
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return data.choices?.[0]?.message?.content || '';
 }
 
 // ── AI 기능 ───────────────────────────────────────────
