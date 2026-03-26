@@ -1,7 +1,7 @@
 // ── 상수 ──────────────────────────────────────────────
 const GIST_ID       = '3b62f1c184e665d934e29facbcceee45';
 const GIST_FILENAME = 'companytasks.json';
-const CLAUDE_MODEL  = 'claude-haiku-4-5-20251001';
+const GEMINI_MODEL  = 'gemini-1.5-flash';
 
 // ── 상태 ──────────────────────────────────────────────
 let db = { projects: [], quickMemos: [], lastUpdated: null };
@@ -1094,25 +1094,19 @@ function closeAiModal() {
   aiModalActions = [];
 }
 
-// ── Claude API ────────────────────────────────────────
+// ── Gemini API ────────────────────────────────────────
 async function callClaude(prompt, system) {
   if (!claudeKey) claudeKey = localStorage.getItem('claude_key') || '';
-  if (!claudeKey) { showToast('Claude API 키를 설정에서 입력해주세요'); throw new Error('no key'); }
+  if (!claudeKey) { showToast('Gemini API 키를 설정에서 입력해주세요'); throw new Error('no key'); }
   if (!system) system = '당신은 업무 관리 도우미입니다. 한국어로 간결하게 답변하세요.';
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${claudeKey}`, {
     method: 'POST',
-    headers: {
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: 'user', content: prompt }]
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 1024 }
     })
   });
   if (!res.ok) {
@@ -1120,7 +1114,7 @@ async function callClaude(prompt, system) {
     throw new Error(err.error?.message || `API 오류 (${res.status})`);
   }
   const data = await res.json();
-  return data.content?.[0]?.text || '';
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 // ── AI 기능 ───────────────────────────────────────────
