@@ -714,24 +714,67 @@ function renderDetail(task) {
             <span class="subtask-expand">▼</span>
           </div>
           <div class="subtask-detail" id="sub-${s.id}">
-            <div class="subtask-meta">
-              <span class="badge ${priorityBadgeClass(s.priority)}">${priorityLabel(s.priority)}</span>
-              <span class="badge badge-gray">${statusLabel(s.status)}</span>
-              ${sdday ? `<span class="badge ${sdday.cls}">${sdday.label}</span>` : ''}
-              ${s.dueDate ? `<span class="badge badge-gray">${s.dueDate}</span>` : ''}
+            <!-- 보기 모드 -->
+            <div id="sub-view-${s.id}">
+              <div class="subtask-meta">
+                <span class="badge ${priorityBadgeClass(s.priority)}">${priorityLabel(s.priority)}</span>
+                <span class="badge badge-gray">${statusLabel(s.status)}</span>
+                ${sdday ? `<span class="badge ${sdday.cls}">${sdday.label}</span>` : ''}
+                ${s.dueDate ? `<span class="badge badge-gray">${s.dueDate}</span>` : ''}
+              </div>
+              <div class="task-progress-wrap" style="margin-bottom:10px">
+                <div class="task-progress-bar"><div class="task-progress-fill" style="width:${s.progress || 0}%"></div></div>
+                <span class="task-progress-text">${s.progress || 0}%</span>
+              </div>
+              <button class="btn-secondary" style="margin-bottom:10px" onclick="toggleSubtaskEdit('${s.id}')">수정</button>
+              ${(s.memos || []).map(m => `
+                <div class="memo-entry">
+                  ${m.content.replace(/\n/g, '<br>')}
+                  <div class="memo-entry-date">${m.createdAt.slice(0, 16).replace('T', ' ')}</div>
+                </div>`).join('')}
+              <div class="inline-memo-form">
+                <textarea id="sub-memo-${s.id}" rows="2" placeholder="세부 업무 메모 추가..."></textarea>
+                <button class="btn-secondary" onclick="addTaskMemo('${task.id}', '${s.id}')">메모 저장</button>
+              </div>
             </div>
-            <div class="task-progress-wrap" style="margin-bottom:10px">
-              <div class="task-progress-bar"><div class="task-progress-fill" style="width:${s.progress || 0}%"></div></div>
-              <span class="task-progress-text">${s.progress || 0}%</span>
-            </div>
-            ${(s.memos || []).map(m => `
-              <div class="memo-entry">
-                ${m.content.replace(/\n/g, '<br>')}
-                <div class="memo-entry-date">${m.createdAt.slice(0, 16).replace('T', ' ')}</div>
-              </div>`).join('')}
-            <div class="inline-memo-form">
-              <textarea id="sub-memo-${s.id}" rows="2" placeholder="세부 업무 메모 추가..."></textarea>
-              <button class="btn-secondary" onclick="addTaskMemo('${task.id}', '${s.id}')">메모 저장</button>
+            <!-- 수정 모드 -->
+            <div id="sub-edit-${s.id}" class="hidden subtask-edit-form">
+              <div class="form-group">
+                <label>세부 업무명</label>
+                <input type="text" id="sub-edit-title-${s.id}" value="${s.title}">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>중요도</label>
+                  <select id="sub-edit-priority-${s.id}">
+                    <option value="high" ${s.priority==='high'?'selected':''}>높음</option>
+                    <option value="medium" ${s.priority==='medium'?'selected':''}>중간</option>
+                    <option value="low" ${s.priority==='low'?'selected':''}>낮음</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>마감일</label>
+                  <input type="date" id="sub-edit-due-${s.id}" value="${s.dueDate || ''}">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>진행 상태</label>
+                  <select id="sub-edit-status-${s.id}">
+                    <option value="todo" ${s.status==='todo'?'selected':''}>시작 전</option>
+                    <option value="in-progress" ${s.status==='in-progress'?'selected':''}>진행 중</option>
+                    <option value="completed" ${s.status==='completed'?'selected':''}>완료</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>진행률 (%)</label>
+                  <input type="number" id="sub-edit-progress-${s.id}" min="0" max="100" value="${s.progress || 0}">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary" onclick="toggleSubtaskEdit('${s.id}')">취소</button>
+                <button class="btn-primary" onclick="saveSubtaskEdit('${task.id}', '${s.id}')">저장</button>
+              </div>
             </div>
           </div>
         </div>`;
@@ -745,6 +788,26 @@ function renderDetail(task) {
 function toggleSubtask(subId) {
   const el = document.getElementById('sub-' + subId);
   if (el) el.classList.toggle('open');
+}
+
+function toggleSubtaskEdit(subId) {
+  document.getElementById(`sub-view-${subId}`).classList.toggle('hidden');
+  document.getElementById(`sub-edit-${subId}`).classList.toggle('hidden');
+}
+
+async function saveSubtaskEdit(taskId, subId) {
+  const task = db.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const sub = task.subtasks.find(s => s.id === subId);
+  if (!sub) return;
+  sub.title = document.getElementById(`sub-edit-title-${subId}`).value.trim() || sub.title;
+  sub.priority = document.getElementById(`sub-edit-priority-${subId}`).value;
+  sub.dueDate = document.getElementById(`sub-edit-due-${subId}`).value;
+  sub.status = document.getElementById(`sub-edit-status-${subId}`).value;
+  sub.progress = parseInt(document.getElementById(`sub-edit-progress-${subId}`).value) || 0;
+  await saveData();
+  renderDetail(task);
+  showToast('세부 업무가 수정됐어요');
 }
 
 async function addTaskMemo(taskId, subId) {

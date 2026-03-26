@@ -232,6 +232,7 @@ body {
 .subtask-title { font-size: 14px; font-weight: 600; flex: 1; }
 .subtask-expand { color: #b2bec3; font-size: 12px; }
 .subtask-detail { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f3f5; display: none; }
+.subtask-edit-form { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 8px; }
 .subtask-detail.open { display: block; }
 .subtask-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 
